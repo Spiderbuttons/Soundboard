@@ -1,0 +1,9 @@
+{
+    "Name": "Soundboard",
+    "Author": "Spiderbuttons",
+    "Version": "1.0.0",
+    "Description": "A template for a Stardew Valley mod.",
+    "UniqueID": "Spiderbuttons.Soundboard",
+    "EntryDll": "Soundboard.dll",
+    "UpdateKeys": []
+}
