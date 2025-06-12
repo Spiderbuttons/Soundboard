@@ -20,6 +20,18 @@
         <OutputPath>bin\Debug</OutputPath>
     </PropertyGroup>
 
+    <ItemGroup>
+        <Content Include="assets\**\*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Publicize Include="StardewModdingAPI" />
+        <Publicize Include="Stardew Valley" />
+        <Publicize Include="StardewValley.GameData" />
+        <Publicize Include="MonoGame.Framework" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.*"/>
@@ -27,6 +39,14 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="PropertyChanged.SourceGenerator" Version="1.1.1">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="assets\views\" />
     </ItemGroup>
 
 </Project>

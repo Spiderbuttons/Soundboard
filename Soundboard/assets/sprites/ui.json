@@ -1,0 +1,10 @@
+{
+    "Sprites": {
+        "PlayButton": {
+            "SourceRect": "0, 0, 7, 9"
+        },
+        "StopButton": {
+            "SourceRect": "7, 0, 7, 9"
+        }
+    }
+}
