@@ -34,7 +34,7 @@ public partial class Soundboard
             Category = category;
             _cue = cue;
             Duration = GetCueDuration(cue);
-            // FormattedDuration = Duration == TimeSpan.Zero ? "(??:??)" : $"({Duration:mm\\:ss})";
+            FormattedDuration = Duration == TimeSpan.Zero ? "(??:??)" : $"({Duration:mm\\:ss})";
             DoesLoop = DoesCueLoop(cue);
             IsModded = IsCueModded(id);
         }
@@ -237,7 +237,7 @@ public partial class Soundboard
             Soundboard = this,
             HeaderText = "Test Board",
         };
-        Game1.activeClickableMenu = ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/TestBoard", context);
+        Game1.activeClickableMenu = ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Testboard", context);
         Game1.activeClickableMenu!.exitFunction = () =>
         {
             IsOpen = false;
