@@ -37,14 +37,29 @@ namespace Soundboard
             Prefix = $"{ModManifest.UniqueID}";
 
             Harmony.PatchAll();
+            Harmony.Patch(
+                original: AccessTools.Method(typeof(GameLocation), nameof(GameLocation.checkForMusic)),
+                prefix: new HarmonyMethod(typeof(ModEntry), nameof(checkForMusic_Prefix))
+            );
 
             Helper.Events.Input.ButtonPressed += OnButtonPressed;
             Helper.Events.GameLoop.GameLaunched += OnGameLaunched;
+            Helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
+            Helper.Events.Content.AssetsInvalidated += OnAssetsInvalidated;
         }
 
-        private static bool UpdateMusic_Prefix()
+        private static bool checkForMusic_Prefix()
         {
-            return false;
+            return Soundboard?.IsOpen != true;
+        }
+
+        private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
+        {
+            foreach (var list in Soundboard.Sounds.Values)
+            {
+                list.Clear();
+            }
+            Soundboard = new Soundboard();
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -60,15 +75,26 @@ namespace Soundboard
             viewEngine.RegisterSprites($"{Prefix}/Sprites", "assets/sprites");
             
             viewEngine.EnableHotReloadingWithSourceSync();
-
-            Soundboard = new Soundboard();
         }
-
+        
+        private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
+        {
+            if (e.NamesWithoutLocale.Any(name => name.IsEquivalentTo("Data/AudioChanges")))
+            {
+                Soundboard._cueChanges = null;
+            }
+        }
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
         {
             if (e.Button is SButton.F2)
             {
-                Log.Warn(Game1.activeClickableMenu);
+                if (Game1.activeClickableMenu is not null)
+                {
+                    Game1.activeClickableMenu = null;
+                    return;
+                }
+        
+                Soundboard?.OpenTestBoard();
             }
         
             if (e.Button is SButton.F3)

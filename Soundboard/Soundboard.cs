@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework.Audio;
 using PropertyChanged.SourceGenerator;
@@ -12,17 +13,30 @@ public partial class Soundboard
 {
     public partial class Sound
     {
-        private readonly ICue _cue;
-        public string Id { get; }
-        public uint Category { get; }
+        private readonly Cue _cue;
+        public string Id;
+        public uint Category;
         public string CategoryString => GetCategoryName();
+
+        public TimeSpan Duration;
+
+        public string FormattedDuration;// => $"({Duration:mm\\:ss})";
+
+        public bool DoesLoop;
+
+        public bool IsModded;
+        
         [Notify] public bool isPlaying;
         
-        public Sound(string id, uint category, ICue cue)
+        public Sound(string id, uint category, Cue cue)
         {
             Id = id;
             Category = category;
             _cue = cue;
+            Duration = GetCueDuration(cue);
+            // FormattedDuration = Duration == TimeSpan.Zero ? "(??:??)" : $"({Duration:mm\\:ss})";
+            DoesLoop = DoesCueLoop(cue);
+            IsModded = IsCueModded(id);
         }
         
         public string GetCategoryName()
@@ -40,14 +54,14 @@ public partial class Soundboard
 
         public void ToggleState()
         {
-            if (_cue.IsPlaying) Stop();
+            if (_cue.IsPlaying == true) Stop();
             else Play();
         }
 
         public void Play()
         {
             if (_cue.IsPlaying || IsPlaying) _cue.Stop(AudioStopOptions.Immediate);
-            _cue.Play();
+            _cue?.Play();
             IsPlaying = true;
             if (!PlayingSounds.Contains(this))
             {
@@ -71,7 +85,12 @@ public partial class Soundboard
         }
     }
 
-    public Dictionary<uint, List<Sound>> Sounds { get; } = new Dictionary<uint, List<Sound>>()
+    public static Dictionary<string, AudioCueData>? _cueChanges = null;
+
+    public static Dictionary<string, AudioCueData> CueChanges { get; } =
+        _cueChanges ??= DataLoader.AudioChanges(Game1.content);
+
+    public static Dictionary<uint, List<Sound>> Sounds { get; } = new Dictionary<uint, List<Sound>>()
     {
         { 1, new List<Sound>() }, // Default
         { 2, new List<Sound>() }, // Music
@@ -86,6 +105,10 @@ public partial class Soundboard
     public List<Sound> Ambient => Sounds[4];
     public List<Sound> Footsteps => Sounds[5];
 
+    [Notify] public string selectedCategory = "Music";
+
+    [Notify] public List<Sound> selectedList = Sounds[2];
+    
     public bool IsOpen = false;
     
     public static List<Sound> PlayingSounds { get; } = new List<Sound>();
@@ -95,26 +118,97 @@ public partial class Soundboard
         GetCues();
     }
     
+    public void GoToNextCategory() 
+    {
+        if (selectedCategory == "Default")
+        {
+            SelectedCategory = "Music";
+            SelectedList = Music;
+        } 
+        else if (selectedCategory == "Music")
+        {
+            SelectedCategory = "Sound Effects";
+            SelectedList = SoundEffects;
+        }
+        else if (selectedCategory == "Sound Effects")
+        {
+            SelectedCategory = "Ambient";
+            SelectedList = Ambient;
+        }
+        else if (selectedCategory == "Ambient")
+        {
+            SelectedCategory = "Footsteps";
+            SelectedList = Footsteps;
+        }
+        else if (selectedCategory == "Footsteps")
+        {
+            SelectedCategory = "Music";
+            SelectedList = Music;
+        }
+        
+        Game1.playSound("shwip");
+    }
+    
     public void GetCues()
     {
         var soundBank = (Game1.soundBank as SoundBankWrapper)?.soundBank;
         if (soundBank == null) return;
 
         var cues = soundBank._cues;
-            
-        foreach (var cue in cues.Values.OrderBy(cue => cue.name))
+
+        foreach (var kvp in cues.OrderBy(kvp => kvp.Key))
         {
-            Log.Warn($"Cue: {cue.name} - Category: {string.Join(",", cue.sounds.Select(sound => sound.categoryID).Distinct())}");
+            var cue = kvp.Value;
+            var id = kvp.Key;
             uint category = cue.sounds.Select(sound => sound.categoryID).FirstOrDefault();
             if (!Sounds.ContainsKey(category))
             {
                 Sounds[category] = new List<Sound>();
             }
-
-            Sounds[category].Add(new Sound(cue.name, category, Game1.soundBank.GetCue(cue.name)));
+            
+            CueWrapper? wrapper = Game1.soundBank.GetCue(cue.name) as CueWrapper;
+            if (wrapper == null) continue;
+            Sounds[category].Add(new Sound(id, category, wrapper.cue));
         }
             
         Log.Info($"Loaded {cues.Count} sound cues into the soundboard.");
+    }
+    
+    public static TimeSpan GetCueDuration(Cue cue)
+    {
+        try
+        {
+            var instance = cue._soundEffect ?? cue._xactSounds?.FirstOrDefault()?.GetSimpleSoundInstance() ??
+                cue.GetPlayWaveEvents()?.FirstOrDefault()?._variants?.FirstOrDefault()
+                    ?.GetSoundEffectInstance();
+            
+            if (instance == null) return TimeSpan.Zero;
+            
+            return SoundEffect.GetSampleDuration(instance._effect.Spring.Length, 44125, AudioChannels.Stereo);
+        }
+        catch (Exception e)
+        {
+            return TimeSpan.Zero;
+        }
+    }
+
+    public static bool DoesCueLoop(Cue cue)
+    {
+        if (cue._xactSounds[0].complexSound)
+        {
+            var instance = cue.GetPlayWaveEvents()[0]._variants[0].GetSoundEffectInstance();
+            return instance.PlatformGetIsLooped();
+        }
+        else
+        {
+            var instance = cue._xactSounds[0].GetSimpleSoundInstance();
+            return instance.PlatformGetIsLooped();
+        }
+    }
+    
+    public static bool IsCueModded(string cueName)
+    {
+        return CueChanges.ContainsKey(cueName);
     }
 
     public void OpenSoundboard()
@@ -126,6 +220,30 @@ public partial class Soundboard
             HeaderText = "Soundboard",
         };
         Game1.activeClickableMenu = ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Soundboard", context);
+        Game1.activeClickableMenu!.exitFunction = () =>
+        {
+            Game1.changeMusicTrack("none");
+            IsOpen = false;
+            PlayingSounds.Clear();
+        };
+        IsOpen = true;
+    }
+
+    public void OpenTestBoard()
+    {
+        Game1.changeMusicTrack("none");
+        var context = new
+        {
+            Soundboard = this,
+            HeaderText = "Test Board",
+        };
+        Game1.activeClickableMenu = ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/TestBoard", context);
+        Game1.activeClickableMenu!.exitFunction = () =>
+        {
+            IsOpen = false;
+            PlayingSounds.Clear();
+        };
+        IsOpen = true;
     }
 
     public void Update()
