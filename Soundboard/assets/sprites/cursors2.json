@@ -1,8 +1,8 @@
 {
-    "Texture": "LooseSprites/Cursors",
+    "Texture": "LooseSprites/Cursors2",
     "Sprites": {
-        "PlayButton": {
-            "SourceRect": "175, 379, 16, 15"
+        "Loop": {
+            "SourceRect": "67, 243, 9, 10"
         }
     }
 }

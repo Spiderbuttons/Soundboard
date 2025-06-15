@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
@@ -11,6 +12,8 @@ using StardewModdingAPI.Utilities;
 using StardewValley;
 using Soundboard.Helpers;
 using Soundboard.APIs;
+using StardewValley.Audio;
+using StardewValley.BellsAndWhistles;
 using StardewValley.Menus;
 
 namespace Soundboard
@@ -27,6 +30,8 @@ namespace Soundboard
 
         public static IViewEngine? viewEngine;
 
+        public static SoundBank VanillaSoundBank = null!;
+
         public static Soundboard? Soundboard { get; set; } = null;
 
         public override void Entry(IModHelper helper)
@@ -36,10 +41,12 @@ namespace Soundboard
             Harmony = new Harmony(ModManifest.UniqueID);
             Prefix = $"{ModManifest.UniqueID}";
 
-            Harmony.PatchAll();
+            VanillaSoundBank = new SoundBank(Game1.audioEngine.Engine,
+                Path.Combine(Game1.content.RootDirectory, "XACT", "Sound Bank.xsb"));
+
             Harmony.Patch(
                 original: AccessTools.Method(typeof(GameLocation), nameof(GameLocation.checkForMusic)),
-                prefix: new HarmonyMethod(typeof(ModEntry), nameof(checkForMusic_Prefix))
+                prefix: new HarmonyMethod(typeof(ModEntry), nameof(ReusablePrefix))
             );
 
             Helper.Events.Input.ButtonPressed += OnButtonPressed;
@@ -48,17 +55,13 @@ namespace Soundboard
             Helper.Events.Content.AssetsInvalidated += OnAssetsInvalidated;
         }
 
-        private static bool checkForMusic_Prefix()
+        private static bool ReusablePrefix()
         {
             return Soundboard?.IsOpen != true;
         }
 
         private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
         {
-            foreach (var list in Soundboard.Sounds.Values)
-            {
-                list.Clear();
-            }
             Soundboard = new Soundboard();
         }
 
@@ -88,13 +91,7 @@ namespace Soundboard
         {
             if (e.Button is SButton.F2)
             {
-                if (Game1.activeClickableMenu is not null)
-                {
-                    Game1.activeClickableMenu = null;
-                    return;
-                }
-        
-                Soundboard?.OpenTestBoard();
+                //
             }
         
             if (e.Button is SButton.F3)

@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
+using HarmonyLib;
 using Microsoft.Xna.Framework.Audio;
 using PropertyChanged.SourceGenerator;
 using Soundboard.Helpers;
+using StardewModdingAPI;
 using StardewValley;
 using StardewValley.GameData;
 
@@ -11,204 +14,155 @@ namespace Soundboard;
 
 public partial class Soundboard
 {
-    public partial class Sound
-    {
-        private readonly Cue _cue;
-        public string Id;
-        public uint Category;
-        public string CategoryString => GetCategoryName();
-
-        public TimeSpan Duration;
-
-        public string FormattedDuration;// => $"({Duration:mm\\:ss})";
-
-        public bool DoesLoop;
-
-        public bool IsModded;
-        
-        [Notify] public bool isPlaying;
-        
-        public Sound(string id, uint category, Cue cue)
-        {
-            Id = id;
-            Category = category;
-            _cue = cue;
-            Duration = GetCueDuration(cue);
-            FormattedDuration = Duration == TimeSpan.Zero ? "(??:??)" : $"({Duration:mm\\:ss})";
-            DoesLoop = DoesCueLoop(cue);
-            IsModded = IsCueModded(id);
-        }
-        
-        public string GetCategoryName()
-        {
-            return Category switch
-            {
-                1 => "Default",
-                2 => "Music",
-                3 => "Sound Effects",
-                4 => "Ambient",
-                5 => "Footsteps",
-                _ => "Unknown"
-            };
-        }
-
-        public void ToggleState()
-        {
-            if (_cue.IsPlaying == true) Stop();
-            else Play();
-        }
-
-        public void Play()
-        {
-            if (_cue.IsPlaying || IsPlaying) _cue.Stop(AudioStopOptions.Immediate);
-            _cue?.Play();
-            IsPlaying = true;
-            if (!PlayingSounds.Contains(this))
-            {
-                PlayingSounds.Add(this);
-            }
-        }
-
-        public void Stop()
-        {
-            if (_cue.IsPlaying) _cue.Stop(AudioStopOptions.Immediate);
-            IsPlaying = false;
-            if (PlayingSounds.Contains(this))
-            {
-                PlayingSounds.Remove(this);
-            }
-        }
-
-        public bool IsCuePlaying()
-        {
-            return _cue.IsPlaying;
-        }
-    }
-
     public static Dictionary<string, AudioCueData>? _cueChanges = null;
 
     public static Dictionary<string, AudioCueData> CueChanges { get; } =
         _cueChanges ??= DataLoader.AudioChanges(Game1.content);
 
-    public static Dictionary<uint, List<Sound>> Sounds { get; } = new Dictionary<uint, List<Sound>>()
-    {
-        { 1, new List<Sound>() }, // Default
-        { 2, new List<Sound>() }, // Music
-        { 3, new List<Sound>() }, // Sound Effects
-        { 4, new List<Sound>() }, // Ambient
-        { 5, new List<Sound>() } // Footsteps
-    };
-    
-    public List<Sound> Default => Sounds[1];
-    public List<Sound> Music => Sounds[2];
-    public List<Sound> SoundEffects => Sounds[3];
-    public List<Sound> Ambient => Sounds[4];
-    public List<Sound> Footsteps => Sounds[5];
+    public SoundList Default = new SoundList("Default");
+    public SoundList Music = new SoundList("Music");
+    public SoundList SoundEffects = new SoundList("Sound Effects");
+    public SoundList Ambient = new SoundList("Ambient");
+    public SoundList Footsteps = new SoundList("Footsteps");
 
     [Notify] public string selectedCategory = "Music";
 
-    [Notify] public List<Sound> selectedList = Sounds[2];
-    
+    public SoundList SelectedList => SelectedCategory switch
+    {
+        "Music" => Music,
+        "Sound Effects" => SoundEffects,
+        "Ambient" => Ambient,
+        "Footsteps" => Footsteps,
+        _ => Default
+    };
+
     public bool IsOpen = false;
-    
-    public static List<Sound> PlayingSounds { get; } = new List<Sound>();
-    
+
     public Soundboard()
     {
         GetCues();
     }
-    
-    public void GoToNextCategory() 
+
+    public void GoToNextCategory(int direction)
     {
-        if (selectedCategory == "Default")
+        SelectedCategory = SelectedCategory switch
         {
-            SelectedCategory = "Music";
-            SelectedList = Music;
-        } 
-        else if (selectedCategory == "Music")
-        {
-            SelectedCategory = "Sound Effects";
-            SelectedList = SoundEffects;
-        }
-        else if (selectedCategory == "Sound Effects")
-        {
-            SelectedCategory = "Ambient";
-            SelectedList = Ambient;
-        }
-        else if (selectedCategory == "Ambient")
-        {
-            SelectedCategory = "Footsteps";
-            SelectedList = Footsteps;
-        }
-        else if (selectedCategory == "Footsteps")
-        {
-            SelectedCategory = "Music";
-            SelectedList = Music;
-        }
-        
+            "Music" => direction > 0 ? "Sound Effects" : "Footsteps",
+            "Sound Effects" => direction > 0 ? "Ambient" : "Music",
+            "Ambient" => direction > 0 ? "Footsteps" : "Sound Effects",
+            "Footsteps" => direction > 0 ? "Music" : "Ambient",
+            _ => "Music"
+        };
+
         Game1.playSound("shwip");
     }
-    
+
     public void GetCues()
     {
-        var soundBank = (Game1.soundBank as SoundBankWrapper)?.soundBank;
-        if (soundBank == null) return;
+        var cues = (Game1.soundBank as SoundBankWrapper)!.soundBank._cues.Keys.ToList();
+        cues.Sort();
 
-        var cues = soundBank._cues;
-
-        foreach (var kvp in cues.OrderBy(kvp => kvp.Key))
+        foreach (var cueName in cues)
         {
-            var cue = kvp.Value;
-            var id = kvp.Key;
-            uint category = cue.sounds.Select(sound => sound.categoryID).FirstOrDefault();
-            if (!Sounds.ContainsKey(category))
+            Cue? q = ModEntry.VanillaSoundBank.Exists(cueName) ? ModEntry.VanillaSoundBank.GetCue(cueName) : (Game1.soundBank.GetCue(cueName) as CueWrapper)?.cue;
+            if (q == null) continue;
+
+            uint category = q._cueDefinition.sounds.Select(sound => sound.categoryID).FirstOrDefault();
+            var sound = new Sound(cueName, q, milliseconds: category is 3 or 5);
+
+            switch (category)
             {
-                Sounds[category] = new List<Sound>();
+                case 1:
+                    Default.AddSound(sound);
+                    break;
+                case 2:
+                    Music.AddSound(sound);
+                    break;
+                case 3:
+                    SoundEffects.AddSound(sound);
+                    break;
+                case 4:
+                    Ambient.AddSound(sound);
+                    break;
+                case 5:
+                    Footsteps.AddSound(sound);
+                    break;
             }
-            
-            CueWrapper? wrapper = Game1.soundBank.GetCue(cue.name) as CueWrapper;
-            if (wrapper == null) continue;
-            Sounds[category].Add(new Sound(id, category, wrapper.cue));
         }
-            
+
         Log.Info($"Loaded {cues.Count} sound cues into the soundboard.");
     }
-    
-    public static TimeSpan GetCueDuration(Cue cue)
+
+    public static (TimeSpan, bool, long) GetCueInfo(Cue cue)
     {
-        try
-        {
-            var instance = cue._soundEffect ?? cue._xactSounds?.FirstOrDefault()?.GetSimpleSoundInstance() ??
-                cue.GetPlayWaveEvents()?.FirstOrDefault()?._variants?.FirstOrDefault()
-                    ?.GetSoundEffectInstance();
-            
-            if (instance == null) return TimeSpan.Zero;
-            
-            return SoundEffect.GetSampleDuration(instance._effect.Spring.Length, 44125, AudioChannels.Stereo);
-        }
-        catch (Exception e)
-        {
-            return TimeSpan.Zero;
-        }
+        return (GetCueDuration(cue), DoesCueLoop(cue, out var loopCount), loopCount);
     }
 
-    public static bool DoesCueLoop(Cue cue)
+    public static TimeSpan GetCueDuration(Cue cue)
     {
+        var fx = cue.GetPlayWaveEvents()?.FirstOrDefault()?._variants?.FirstOrDefault()?.GetSoundEffect() ?? cue._xactSounds?.FirstOrDefault()?.GetSimpleSoundInstance()?._effect;
+        return fx switch
+        {
+            OggStreamSoundEffect ogg => SoundEffect.GetSampleDuration((int)ogg.TotalSamplesPerChannel * OggStreamSoundEffect.BytesPerSample * 2, ogg.SampleRate, AudioChannels.Stereo),
+            not null => SoundEffect.GetSampleDuration(fx?.Spring?.Length ?? 0, fx?.Spring?.SampleRate ?? 44125, AudioChannels.Stereo),
+            _ => TimeSpan.Zero
+        };
+    }
+
+    public static bool DoesCueLoop(Cue cue, out long loopCount)
+    {
+        loopCount = cue.GetPlayWaveEvents()?.Max(e => e._loopCount) ?? 0;
+        return loopCount > 0;
+
+        // return events is not null && events.Any(e => e is not null && e._loopCount > 0);
         if (cue._xactSounds[0].complexSound)
         {
             var instance = cue.GetPlayWaveEvents()[0]._variants[0].GetSoundEffectInstance();
-            return instance.PlatformGetIsLooped();
+            return instance.LoopCount > 0;
         }
         else
         {
             var instance = cue._xactSounds[0].GetSimpleSoundInstance();
-            return instance.PlatformGetIsLooped();
+            return instance.LoopCount > 0;
         }
     }
-    
+
     public static bool IsCueModded(string cueName)
     {
-        return CueChanges.ContainsKey(cueName);
+        return CueChanges.ContainsKey(cueName) || !ModEntry.VanillaSoundBank.Exists(cueName);
+    }
+
+    public bool HandleButton(SButton button)
+    {
+        return ChangeCategory(button) || ChangePage(button);
+    }
+
+    public bool ChangeCategory(SButton button)
+    {
+        int direction = button switch
+        {
+            SButton.LeftTrigger => -1,
+            SButton.RightTrigger => 1,
+            _ => 0
+        };
+
+        if (direction == 0) return false;
+        GoToNextCategory(direction);
+        return true;
+    }
+
+    public bool ChangePage(SButton button)
+    {
+        int direction = button switch
+        {
+            SButton.LeftShoulder => -1,
+            SButton.RightShoulder => 1,
+            _ => 0
+        };
+
+        if (direction == 0) return false;
+        SelectedList.SwitchPage(direction);
+        return true;
     }
 
     public void OpenSoundboard()
@@ -219,12 +173,17 @@ public partial class Soundboard
             Soundboard = this,
             HeaderText = "Soundboard",
         };
-        Game1.activeClickableMenu = ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Soundboard", context);
+        Game1.activeClickableMenu =
+            ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Soundboard", context);
         Game1.activeClickableMenu!.exitFunction = () =>
         {
             Game1.changeMusicTrack("none");
             IsOpen = false;
-            PlayingSounds.Clear();
+            Default.StopAllSounds();
+            Music.StopAllSounds();
+            SoundEffects.StopAllSounds();
+            Ambient.StopAllSounds();
+            Footsteps.StopAllSounds();
         };
         IsOpen = true;
     }
@@ -237,20 +196,23 @@ public partial class Soundboard
             Soundboard = this,
             HeaderText = "Test Board",
         };
-        Game1.activeClickableMenu = ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Testboard", context);
+        Game1.activeClickableMenu =
+            ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Testboard", context);
         Game1.activeClickableMenu!.exitFunction = () =>
         {
+            Game1.changeMusicTrack("none");
             IsOpen = false;
-            PlayingSounds.Clear();
+            Default.StopAllSounds();
+            Music.StopAllSounds();
+            SoundEffects.StopAllSounds();
+            Ambient.StopAllSounds();
+            Footsteps.StopAllSounds();
         };
         IsOpen = true;
     }
 
     public void Update()
     {
-        foreach (var sound in PlayingSounds.ToList().Where(sound => !sound.IsCuePlaying()))
-        {
-            sound.Stop();
-        }
+        // Log.Warn("Updating Soundboard");
     }
 }
