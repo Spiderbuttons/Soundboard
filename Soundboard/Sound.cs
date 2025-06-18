@@ -83,13 +83,8 @@ public partial class Sound
         IsPlaying = false;
     }
 
-    private bool IsCuePlaying()
+    public bool IsCuePlaying()
     {
         return _cue.IsPlaying;
-    }
-    
-    public void Update()
-    {
-        IsPlaying = IsCuePlaying();
     }
 }

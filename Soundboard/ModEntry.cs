@@ -63,7 +63,7 @@ namespace Soundboard
         private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
         {
             Soundboard = new Soundboard();
-            Soundboard.PrepareSoundboard();
+            // Soundboard.PrepareSoundboard();
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -97,7 +97,8 @@ namespace Soundboard
             {
                 if (Game1.activeClickableMenu is not null)
                 {
-                    Game1.activeClickableMenu = null;
+                    Soundboard?.CloseSoundboard();
+                    return;
                 }
         
                 Soundboard?.OpenSoundboard();

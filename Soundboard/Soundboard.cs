@@ -167,20 +167,26 @@ public partial class Soundboard
         {
             Soundboard = this,
         });
-        SoundboardMenu!.exitFunction = () =>
-        {
-            Game1.changeMusicTrack("none");
-            IsOpen = false;
-            Default.StopAllSounds();
-            Music.StopAllSounds();
-            SoundEffects.StopAllSounds();
-            Ambient.StopAllSounds();
-            Footsteps.StopAllSounds();
-        };
+        SoundboardMenu!.exitFunction = CloseSoundboard;
+    }
+
+    public void CloseSoundboard()
+    {
+        SoundboardMenu?.exitThisMenu();
+        Default.StopAllSounds();
+        Music.StopAllSounds();
+        SoundEffects.StopAllSounds();
+        Ambient.StopAllSounds();
+        Footsteps.StopAllSounds();
+        Game1.changeMusicTrack("none");
+        IsOpen = false;
     }
 
     public void OpenSoundboard()
     {
+        if (SoundboardMenu == null)
+            PrepareSoundboard();
+        
         Game1.changeMusicTrack("none");
         Game1.activeClickableMenu = SoundboardMenu;
         IsOpen = true;

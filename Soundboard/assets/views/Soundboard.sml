@@ -9,7 +9,7 @@
             <scrollable peeking="64">
                 <grid item-layout="count: 2" item-spacing="32,0" horizontal-item-alignment="middle">
                     <panel *repeat={CurrentPage}>
-                        <frame  focusable="true" transform-origin="0.5,0.5" +transition:transform="100ms 0s easeOutCirc" transform={Transform} click=|ToggleState()| padding="24, 16" margin="0, 12" vertical-content-alignment="middle" background= {@Spiderbuttons.Soundboard/Sprites/UI:Border}>
+                        <frame  focusable="true" transform-origin="0.5,0.5" +transition:transform="100ms 0s easeOutCirc" transform={Transform} click=|~SoundList.ToggleSound(Id)| padding="24, 16" margin="0, 12" vertical-content-alignment="middle" background= {@Spiderbuttons.Soundboard/Sprites/UI:Border}>
                             <lane layout="stretch content" margin="0,8" vertical-content-alignment="middle" >
                                 <image *!if={IsPlaying} layout="36px" margin="0,0,4,0" sprite={@Spiderbuttons.Soundboard/Sprites/UI:PlayButton} />
                                 <image *if={IsPlaying} layout="36px" margin="0,0,4,0" sprite={@Spiderbuttons.Soundboard/Sprites/UI:StopButton} />

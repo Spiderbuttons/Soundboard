@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using PropertyChanged.SourceGenerator;
+using Soundboard.Helpers;
 using StardewValley;
+using StardewValley.Extensions;
+
 // ReSharper disable MemberCanBePrivate.Global
 
 namespace Soundboard;
@@ -65,8 +68,7 @@ public partial class SoundList(string category)
         else
         {
             sound.Play();
-            if (!PlayingSounds.Contains(sound))
-                PlayingSounds.Add(sound);
+            PlayingSounds.Add(sound);
         }
     }
     
@@ -98,5 +100,14 @@ public partial class SoundList(string category)
             sound.Stop();
         }
         PlayingSounds.Clear();
+    }
+
+    public void Update()
+    {
+        PlayingSounds.RemoveWhere(s =>
+        {
+            s.IsPlaying = s.IsCuePlaying();
+            return !s.IsPlaying;
+        });
     }
 }
