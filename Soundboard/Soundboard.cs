@@ -64,16 +64,16 @@ public partial class Soundboard
         Game1.playSound("shwip");
     }
 
-    public void GetCues()
+    public void GetCues(bool modifiedOnly = false, bool vanillaOnly = false)
     {
-        ClearLists();
-        var cues = (Game1.soundBank as SoundBankWrapper)!.soundBank._cues.Keys.ToList();
+        if (!modifiedOnly) ClearLists();
+        
+        var cues = vanillaOnly ? ModEntry.VanillaSoundBank._cues.Keys.ToList() : !modifiedOnly ? (Game1.soundBank as SoundBankWrapper)!.soundBank._cues.Keys.ToList() : CueChanges.Keys.ToList();
         cues.Sort();
 
         foreach (var cueName in cues)
         {
-            // ModEntry.VanillaSoundBank.Exists(cueName) && !CueChanges.ContainsKey(cueName) ? ModEntry.VanillaSoundBank.GetCue(cueName) : 
-            Cue? q = (Game1.soundBank.GetCue(cueName) as CueWrapper)?.cue;
+            Cue? q = vanillaOnly ? ModEntry.VanillaSoundBank.GetCue(cueName) : (Game1.soundBank.GetCue(cueName) as CueWrapper)?.cue;
             if (q == null) continue;
 
             uint category = q._cueDefinition.sounds.Select(sound => sound.categoryID).FirstOrDefault();

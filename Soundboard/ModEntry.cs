@@ -97,17 +97,12 @@ namespace Soundboard
         {
             if (e.NameWithoutLocale.IsEquivalentTo("Data/AudioChanges"))
             {
-                Soundboard?.GetCues();
+                Soundboard?.GetCues(modifiedOnly: true);
             }
         }
         
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
         {
-            if (e.Button is SButton.F2)
-            {
-                Helper.GameContent.InvalidateCache("Data/AudioChanges");
-            }
-            
             if (e.Button is SButton.F3)
             {
                 if (Game1.activeClickableMenu is not null)

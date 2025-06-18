@@ -14,13 +14,13 @@ public partial class SoundList(string category)
 {
     public string Category = category;
 
-    private readonly List<Sound> Sounds = [];
+    private readonly SortedList<string, Sound> Sounds = [];
 
     private readonly List<Sound> PlayingSounds = [];
 
     [Notify] private int pageNumber;
 
-    public List<Sound> CurrentPage => Sounds.GetRange(PageNumber * 10, Math.Min(10, Sounds.Count - PageNumber * 10));
+    public List<Sound> CurrentPage => Sounds.Values.ToList().GetRange(PageNumber * 10, Math.Min(10, Sounds.Count - PageNumber * 10));
     
     public bool AtMaxPage => PageNumber + 1 > Sounds.Count / 10;
     
@@ -28,9 +28,7 @@ public partial class SoundList(string category)
 
     public void AddSound(Sound sound)
     {
-        int index = Sounds.FindIndex(s => s.Id == sound.Id);
-        if (index is -1) Sounds.Add(sound);
-        else Sounds[index] = sound;
+        Sounds[sound.Id] = sound;
     }
 
     public void RemoveAllSoundS()
