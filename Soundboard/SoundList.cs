@@ -28,7 +28,15 @@ public partial class SoundList(string category)
 
     public void AddSound(Sound sound)
     {
-        Sounds.Add(sound);
+        int index = Sounds.FindIndex(s => s.Id == sound.Id);
+        if (index is -1) Sounds.Add(sound);
+        else Sounds[index] = sound;
+    }
+
+    public void RemoveAllSoundS()
+    {
+        Sounds.Clear();
+        PlayingSounds.Clear();
     }
     
     public void SwitchPage(int direction)

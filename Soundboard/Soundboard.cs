@@ -64,8 +64,9 @@ public partial class Soundboard
         Game1.playSound("shwip");
     }
 
-    private void GetCues()
+    public void GetCues()
     {
+        ClearLists();
         var cues = (Game1.soundBank as SoundBankWrapper)!.soundBank._cues.Keys.ToList();
         cues.Sort();
 
@@ -99,6 +100,15 @@ public partial class Soundboard
         }
 
         Log.Info($"Loaded {cues.Count} sound cues into the soundboard.");
+    }
+
+    private void ClearLists()
+    {
+        Default.RemoveAllSoundS();
+        Music.RemoveAllSoundS();
+        SoundEffects.RemoveAllSoundS();
+        Ambient.RemoveAllSoundS();
+        Footsteps.RemoveAllSoundS();
     }
 
     public static (TimeSpan, bool, long) GetCueInfo(Cue cue)

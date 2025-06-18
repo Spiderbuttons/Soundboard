@@ -53,6 +53,7 @@ namespace Soundboard
             Helper.Events.GameLoop.GameLaunched += OnGameLaunched;
             Helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
             Helper.Events.Content.AssetsInvalidated += OnAssetsInvalidated;
+            Helper.Events.Content.AssetReady += OnAssetReady;
         }
 
         private static bool ReusablePrefix()
@@ -91,8 +92,22 @@ namespace Soundboard
                 Soundboard._cueChanges = null;
             }
         }
+
+        private void OnAssetReady(object? sender, AssetReadyEventArgs e)
+        {
+            if (e.NameWithoutLocale.IsEquivalentTo("Data/AudioChanges"))
+            {
+                Soundboard?.GetCues();
+            }
+        }
+        
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
         {
+            if (e.Button is SButton.F2)
+            {
+                Helper.GameContent.InvalidateCache("Data/AudioChanges");
+            }
+            
             if (e.Button is SButton.F3)
             {
                 if (Game1.activeClickableMenu is not null)
