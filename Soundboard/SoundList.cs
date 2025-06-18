@@ -1,34 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using PropertyChanged.SourceGenerator;
-using Soundboard.Helpers;
 using StardewValley;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace Soundboard;
 
-public partial class SoundList
+public partial class SoundList(string category)
 {
-    public string Category;
+    public string Category = category;
 
-    public List<Sound> Sounds = new List<Sound>();
+    private readonly List<Sound> Sounds = [];
 
-    public List<Sound> PlayingSounds = new List<Sound>();
+    private readonly List<Sound> PlayingSounds = [];
 
-    [Notify] public int pageNumber;
+    [Notify] private int pageNumber;
 
     public List<Sound> CurrentPage => Sounds.GetRange(PageNumber * 10, Math.Min(10, Sounds.Count - PageNumber * 10));
     
     public bool AtMaxPage => PageNumber + 1 > Sounds.Count / 10;
     
     public bool AtMinPage => PageNumber <= 0;
-    
-    public SoundList(string category)
-    {
-        Category = category;
-    }
-    
+
     public void AddSound(Sound sound)
     {
         Sounds.Add(sound);
@@ -104,13 +98,5 @@ public partial class SoundList
             sound.Stop();
         }
         PlayingSounds.Clear();
-    }
-
-    public void Update()
-    {
-        foreach (var sound in PlayingSounds)
-        {
-            // sound.IsPlaying = sound.IsCuePlaying();
-        }
     }
 }

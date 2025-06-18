@@ -2,32 +2,54 @@
 using Microsoft.Xna.Framework.Audio;
 using PropertyChanged.SourceGenerator;
 using Soundboard.Helpers;
+using StardewValley;
+using StardewValley.Menus;
+
+// ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
 
 namespace Soundboard;
 
 public partial class Sound
 {
     private readonly Cue _cue;
-    public string Id;
+    public readonly string Id;
 
-    public TimeSpan Duration;
+    public readonly TimeSpan Duration;
 
     public string FormattedDuration;
 
-    public bool DoesLoop;
+    public readonly bool DoesLoop;
 
-    public long LoopCount;
+    public readonly long LoopCount;
 
     public bool IsModded;
         
-    [Notify] public bool isPlaying;
+    [Notify] private bool isPlaying;
+
+    public bool ShouldDisplayToolTip
+    {
+        get
+        {
+            var mainWidth = Game1.activeClickableMenu is null
+                ? Game1.uiViewport.Width / 2 - 100
+                : Game1.activeClickableMenu.width;
+            var boxWidth = Math.Max(mainWidth - 64, 800) / 2f - 32;
+            var maxTextFit = boxWidth - 24 - 36 - 16 - 8 - Soundboard.DURATION_WIDTH;
+            return IdWidth > maxTextFit;
+        }
+    }
+
+    public readonly int IdWidth;
+
+    public string Tooltip => ShouldDisplayToolTip ? Id : string.Empty;
 
     public string Transform => IsPlaying ? "scale: 0.95" : "scale: 1";
         
-    public Sound(string id, Cue cue, bool milliseconds = false)
+    public Sound(string id, Cue cue, float pitch = 1200f, bool milliseconds = false)
     {
         Id = id;
         _cue = cue;
+        _cue.SetVariable("Pitch", pitch);
         var info = Soundboard.GetCueInfo(cue);
         Duration = info.Item1;
         DoesLoop = info.Item2;
@@ -39,11 +61,12 @@ public partial class Sound
         }
         FormattedDuration = Duration == TimeSpan.Zero ? "(??:??)" : !milliseconds ? $"({Duration:mm\\:ss})" : $"({Duration:ss\\.ff})";
         IsModded = Soundboard.IsCueModded(id);
+        IdWidth = (int)Game1.smallFont.MeasureString(Id).X;
     }
 
     public void ToggleState()
     {
-        if (_cue.IsPlaying == true) Stop();
+        if (_cue.IsPlaying) Stop();
         else Play();
     }
 
@@ -60,7 +83,7 @@ public partial class Sound
         IsPlaying = false;
     }
 
-    public bool IsCuePlaying()
+    private bool IsCuePlaying()
     {
         return _cue.IsPlaying;
     }

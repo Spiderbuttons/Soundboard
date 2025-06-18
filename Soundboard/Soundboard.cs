@@ -1,29 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
-using HarmonyLib;
 using Microsoft.Xna.Framework.Audio;
 using PropertyChanged.SourceGenerator;
 using Soundboard.Helpers;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.GameData;
+using StardewValley.Menus;
+
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace Soundboard;
 
 public partial class Soundboard
 {
-    public static Dictionary<string, AudioCueData>? _cueChanges = null;
+    public const int DURATION_WIDTH = 76;
+    
+    public static Dictionary<string, AudioCueData>? _cueChanges;
 
-    public static Dictionary<string, AudioCueData> CueChanges { get; } =
+    private static Dictionary<string, AudioCueData> CueChanges { get; } =
         _cueChanges ??= DataLoader.AudioChanges(Game1.content);
 
-    public SoundList Default = new SoundList("Default");
-    public SoundList Music = new SoundList("Music");
-    public SoundList SoundEffects = new SoundList("Sound Effects");
-    public SoundList Ambient = new SoundList("Ambient");
-    public SoundList Footsteps = new SoundList("Footsteps");
+    private readonly SoundList Default = new ("Default");
+    private readonly SoundList Music = new ("Music");
+    private readonly SoundList SoundEffects = new ("Sound Effects");
+    private readonly SoundList Ambient = new ("Ambient");
+    private readonly SoundList Footsteps = new ("Footsteps");
 
     [Notify] public string selectedCategory = "Music";
 
@@ -35,8 +38,12 @@ public partial class Soundboard
         "Footsteps" => Footsteps,
         _ => Default
     };
+    
+    public string CategoryName => ModEntry.ModHelper.Translation.Get(SelectedList.Category);
 
-    public bool IsOpen = false;
+    public bool IsOpen;
+
+    public static IClickableMenu? SoundboardMenu;
 
     public Soundboard()
     {
@@ -57,18 +64,19 @@ public partial class Soundboard
         Game1.playSound("shwip");
     }
 
-    public void GetCues()
+    private void GetCues()
     {
         var cues = (Game1.soundBank as SoundBankWrapper)!.soundBank._cues.Keys.ToList();
         cues.Sort();
 
         foreach (var cueName in cues)
         {
-            Cue? q = ModEntry.VanillaSoundBank.Exists(cueName) ? ModEntry.VanillaSoundBank.GetCue(cueName) : (Game1.soundBank.GetCue(cueName) as CueWrapper)?.cue;
+            // ModEntry.VanillaSoundBank.Exists(cueName) && !CueChanges.ContainsKey(cueName) ? ModEntry.VanillaSoundBank.GetCue(cueName) : 
+            Cue? q = (Game1.soundBank.GetCue(cueName) as CueWrapper)?.cue;
             if (q == null) continue;
 
             uint category = q._cueDefinition.sounds.Select(sound => sound.categoryID).FirstOrDefault();
-            var sound = new Sound(cueName, q, milliseconds: category is 3 or 5);
+            var sound = new Sound(cueName, q, pitch: 1200f, milliseconds: category is 3 or 5);
 
             switch (category)
             {
@@ -98,33 +106,21 @@ public partial class Soundboard
         return (GetCueDuration(cue), DoesCueLoop(cue, out var loopCount), loopCount);
     }
 
-    public static TimeSpan GetCueDuration(Cue cue)
+    private static TimeSpan GetCueDuration(Cue cue)
     {
         var fx = cue.GetPlayWaveEvents()?.FirstOrDefault()?._variants?.FirstOrDefault()?.GetSoundEffect() ?? cue._xactSounds?.FirstOrDefault()?.GetSimpleSoundInstance()?._effect;
         return fx switch
         {
             OggStreamSoundEffect ogg => SoundEffect.GetSampleDuration((int)ogg.TotalSamplesPerChannel * OggStreamSoundEffect.BytesPerSample * 2, ogg.SampleRate, AudioChannels.Stereo),
-            not null => SoundEffect.GetSampleDuration(fx?.Spring?.Length ?? 0, fx?.Spring?.SampleRate ?? 44125, AudioChannels.Stereo),
+            not null => SoundEffect.GetSampleDuration(fx.Spring?.Length ?? 0, fx.Spring?.SampleRate ?? 44125, AudioChannels.Stereo),
             _ => TimeSpan.Zero
         };
     }
 
-    public static bool DoesCueLoop(Cue cue, out long loopCount)
+    private static bool DoesCueLoop(Cue cue, out long loopCount)
     {
         loopCount = cue.GetPlayWaveEvents()?.Max(e => e._loopCount) ?? 0;
         return loopCount > 0;
-
-        // return events is not null && events.Any(e => e is not null && e._loopCount > 0);
-        if (cue._xactSounds[0].complexSound)
-        {
-            var instance = cue.GetPlayWaveEvents()[0]._variants[0].GetSoundEffectInstance();
-            return instance.LoopCount > 0;
-        }
-        else
-        {
-            var instance = cue._xactSounds[0].GetSimpleSoundInstance();
-            return instance.LoopCount > 0;
-        }
     }
 
     public static bool IsCueModded(string cueName)
@@ -137,7 +133,7 @@ public partial class Soundboard
         return ChangeCategory(button) || ChangePage(button);
     }
 
-    public bool ChangeCategory(SButton button)
+    private bool ChangeCategory(SButton button)
     {
         int direction = button switch
         {
@@ -151,7 +147,7 @@ public partial class Soundboard
         return true;
     }
 
-    public bool ChangePage(SButton button)
+    private bool ChangePage(SButton button)
     {
         int direction = button switch
         {
@@ -165,54 +161,29 @@ public partial class Soundboard
         return true;
     }
 
+    public void PrepareSoundboard()
+    {
+        SoundboardMenu = ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Soundboard", new
+        {
+            Soundboard = this,
+        });
+        SoundboardMenu!.exitFunction = () =>
+        {
+            Game1.changeMusicTrack("none");
+            IsOpen = false;
+            Default.StopAllSounds();
+            Music.StopAllSounds();
+            SoundEffects.StopAllSounds();
+            Ambient.StopAllSounds();
+            Footsteps.StopAllSounds();
+        };
+    }
+
     public void OpenSoundboard()
     {
         Game1.changeMusicTrack("none");
-        var context = new
-        {
-            Soundboard = this,
-            HeaderText = "Soundboard",
-        };
-        Game1.activeClickableMenu =
-            ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Soundboard", context);
-        Game1.activeClickableMenu!.exitFunction = () =>
-        {
-            Game1.changeMusicTrack("none");
-            IsOpen = false;
-            Default.StopAllSounds();
-            Music.StopAllSounds();
-            SoundEffects.StopAllSounds();
-            Ambient.StopAllSounds();
-            Footsteps.StopAllSounds();
-        };
+        Game1.activeClickableMenu = SoundboardMenu;
         IsOpen = true;
-    }
-
-    public void OpenTestBoard()
-    {
-        Game1.changeMusicTrack("none");
-        var context = new
-        {
-            Soundboard = this,
-            HeaderText = "Test Board",
-        };
-        Game1.activeClickableMenu =
-            ModEntry.viewEngine?.CreateMenuFromAsset($"{ModEntry.Prefix}/Views/Testboard", context);
-        Game1.activeClickableMenu!.exitFunction = () =>
-        {
-            Game1.changeMusicTrack("none");
-            IsOpen = false;
-            Default.StopAllSounds();
-            Music.StopAllSounds();
-            SoundEffects.StopAllSounds();
-            Ambient.StopAllSounds();
-            Footsteps.StopAllSounds();
-        };
-        IsOpen = true;
-    }
-
-    public void Update()
-    {
-        // Log.Warn("Updating Soundboard");
+        Game1.playSound("bigSelect");
     }
 }

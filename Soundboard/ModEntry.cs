@@ -63,6 +63,7 @@ namespace Soundboard
         private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
         {
             Soundboard = new Soundboard();
+            Soundboard.PrepareSoundboard();
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -78,6 +79,9 @@ namespace Soundboard
             viewEngine.RegisterSprites($"{Prefix}/Sprites", "assets/sprites");
             
             viewEngine.EnableHotReloadingWithSourceSync();
+            
+            viewEngine.PreloadAssets();
+            viewEngine.PreloadModels(typeof(Soundboard), typeof(SoundList), typeof(Sound));
         }
         
         private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
@@ -89,17 +93,11 @@ namespace Soundboard
         }
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
         {
-            if (e.Button is SButton.F2)
-            {
-                //
-            }
-        
             if (e.Button is SButton.F3)
             {
                 if (Game1.activeClickableMenu is not null)
                 {
                     Game1.activeClickableMenu = null;
-                    return;
                 }
         
                 Soundboard?.OpenSoundboard();
