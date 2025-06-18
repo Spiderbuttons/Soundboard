@@ -18,12 +18,14 @@ public partial class Sound
 
     public string FormattedDuration;
 
+    [Notify] public string durationRemaining;
+
     public readonly bool DoesLoop;
 
     public readonly long LoopCount;
 
     public bool IsModded;
-        
+
     [Notify] private bool isPlaying;
 
     public bool ShouldDisplayToolTip
@@ -44,7 +46,9 @@ public partial class Sound
     public string Tooltip => ShouldDisplayToolTip ? Id : string.Empty;
 
     public string Transform => IsPlaying ? "scale: 0.95" : "scale: 1";
-        
+
+    public bool useMilliseconds;
+
     public Sound(string id, Cue cue, float pitch = 1200f, bool milliseconds = false)
     {
         Id = id;
@@ -59,7 +63,11 @@ public partial class Sound
             Duration *= LoopCount + 1;
             DoesLoop = false; // It's only considered a "true loop" if it's specifically 255.
         }
-        FormattedDuration = Duration == TimeSpan.Zero ? "(??:??)" : !milliseconds ? $"({Duration:mm\\:ss})" : $"({Duration:ss\\.ff})";
+
+        useMilliseconds = milliseconds;
+        FormattedDuration = Duration == TimeSpan.Zero ? "(??:??)" :
+            !useMilliseconds ? $"({Duration:mm\\:ss})" : $"({Duration:ss\\.ff})";
+        durationRemaining = FormattedDuration;
         IsModded = Soundboard.IsCueModded(id);
         IdWidth = (int)Game1.smallFont.MeasureString(Id).X;
     }
@@ -86,5 +94,39 @@ public partial class Sound
     public bool IsCuePlaying()
     {
         return _cue.IsPlaying;
+    }
+
+    public void Update()
+    {
+        if (!IsPlaying)
+        {
+            DurationRemaining = FormattedDuration;
+            return;
+        }
+
+        double time = _cue._time;
+        if (time > Duration.TotalSeconds && !DoesLoop)
+        {
+            // Sometimes our time calculation is not 100% accurate, due to floating point inacurracy from the subtraction below
+            // or because the Cue is being played at the hardcoded 1200f but in actuality it's meant to be played at a different pitch (and thus speed)
+            // or because the Cue has multiple possible sounds in it that are different lengths...
+            // or probably some other reason I haven't discovered yet. Point is, things can vary.
+            // So just show 00:00 instead of a negative time or a weirdly counting /up/ time if our counter goes over our displayed duration.
+            DurationRemaining = !useMilliseconds ? "(00:00)" : "(00.00)";
+            return;
+        }
+        
+        // _time will keep counting even after the Cue loops, it doesn't get reset
+        // So we need to make sure it stays under the total Duration or else it'll go negative.
+        while (time > Duration.TotalSeconds)
+        {
+            time -= Duration.TotalSeconds;
+        }
+        
+        if (time < 0 || Duration == TimeSpan.Zero) return;
+
+        TimeSpan remaining = Duration.Subtract(TimeSpan.FromSeconds(time));
+        
+        DurationRemaining = !useMilliseconds ? $"({remaining:mm\\:ss})" : $"({remaining:ss\\.ff})";
     }
 }
