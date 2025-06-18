@@ -13,7 +13,7 @@
                             <lane layout="stretch content" margin="0,8" vertical-content-alignment="middle" >
                                 <image *!if={IsPlaying} layout="36px" margin="0,0,4,0" sprite={@Spiderbuttons.Soundboard/Sprites/UI:PlayButton} />
                                 <image *if={IsPlaying} layout="36px" margin="0,0,4,0" sprite={@Spiderbuttons.Soundboard/Sprites/UI:StopButton} />
-                                <image *if={:IsModded} z-index="69" padding="0,0,0,-8" tooltip={#Modded} layout="24px" margin="-32,-24,8,8" sprite={@Spiderbuttons.Soundboard/Sprites/UI:Pufferchick} />
+                                <image *if={:IsModded} z-index="69" padding="0,0,0,-4" tooltip={#Modded} layout="24px" margin="-32,-24,8,8" sprite={@Spiderbuttons.Soundboard/Sprites/UI:Pufferchick} />
                                 <image *if={:DoesLoop} tooltip={#Loops} layout="24px" margin="-32,12,8,-12" transform="translateX: 1" sprite={@Spiderbuttons.Soundboard/Sprites/Cursors2:Loop} />
                                 <label layout="stretch content" tooltip={Tooltip} margin="-4,0,8,0" max-lines="1" text={:Id} />
                                 <label *!if={IsPlaying} margin="8,0,0,0" opacity="0.65" text={:FormattedDuration} />
