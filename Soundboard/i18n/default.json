@@ -10,5 +10,5 @@
   "Config.Tooltips": "Force Tooltips",
   "Config.Tooltips.Desc": "Show tooltips for all cues even if they are not too long to display.",
   "Config.Vanilla": "Vanilla Only",
-  "Config.Vanilla.Desc": "Use unmodded sounds only. Modifications to vanilla sounds will not be applied in the Soundboard (but will be applied outside of it). Using this option means the Soundboard will not be able to access your volume settings. All volumes will be set to default values."
+  "Config.Vanilla.Desc": "Use unmodded sounds only. Modifications to vanilla sounds will not be applied in the Soundboard (but will be applied outside of it)."
 }
