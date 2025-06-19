@@ -66,7 +66,6 @@ public partial class Soundboard
 
     public void GetCues(bool modifiedOnly = false, bool vanillaOnly = false)
     {
-        Log.Alert(vanillaOnly);
         if (!modifiedOnly) ClearLists();
         
         var cues = vanillaOnly ? ModEntry.VanillaSoundBank._cues.Keys.ToList() : !modifiedOnly ? (Game1.soundBank as SoundBankWrapper)!.soundBank._cues.Keys.ToList() : CueChanges.Keys.ToList();

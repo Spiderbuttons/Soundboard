@@ -120,8 +120,6 @@ namespace Soundboard
             viewEngine.RegisterViews($"{Prefix}/Views", "assets/views");
             viewEngine.RegisterSprites($"{Prefix}/Sprites", "assets/sprites");
             
-            viewEngine.EnableHotReloadingWithSourceSync();
-            
             viewEngine.PreloadAssets();
             viewEngine.PreloadModels(typeof(Soundboard), typeof(SoundList), typeof(Sound));
         }
