@@ -32,6 +32,8 @@ public partial class Sound
     {
         get
         {
+            if (ModEntry.ModConfig.ForceTooltips) return true;
+            
             var mainWidth = Game1.activeClickableMenu is null
                 ? Game1.uiViewport.Width / 2 - 100
                 : Game1.activeClickableMenu.width;

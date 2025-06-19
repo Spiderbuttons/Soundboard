@@ -43,11 +43,11 @@ public partial class Soundboard
 
     public bool IsOpen;
 
-    public static IClickableMenu? SoundboardMenu;
+    public IClickableMenu? SoundboardMenu;
 
     public Soundboard()
     {
-        GetCues();
+        GetCues(vanillaOnly: ModEntry.ModConfig.VanillaOnly);
     }
 
     public void GoToNextCategory(int direction)
@@ -66,6 +66,7 @@ public partial class Soundboard
 
     public void GetCues(bool modifiedOnly = false, bool vanillaOnly = false)
     {
+        Log.Alert(vanillaOnly);
         if (!modifiedOnly) ClearLists();
         
         var cues = vanillaOnly ? ModEntry.VanillaSoundBank._cues.Keys.ToList() : !modifiedOnly ? (Game1.soundBank as SoundBankWrapper)!.soundBank._cues.Keys.ToList() : CueChanges.Keys.ToList();
@@ -135,6 +136,8 @@ public partial class Soundboard
 
     public static bool IsCueModded(string cueName)
     {
+        if (ModEntry.ModConfig.VanillaOnly) return false;
+        
         return CueChanges.ContainsKey(cueName) || !ModEntry.VanillaSoundBank.Exists(cueName);
     }
 
@@ -196,10 +199,25 @@ public partial class Soundboard
     {
         if (SoundboardMenu == null)
             PrepareSoundboard();
+
+        if (ModEntry.ModConfig.VanillaOnly)
+        {
+            for (int i = 0; i < ModEntry.VanillaSoundBank._audioengine.Categories.Length; i++)
+            {
+                var category = ModEntry.VanillaSoundBank._audioengine.Categories[i];
+                var vanillaCategory = (Game1.soundBank as SoundBankWrapper)!.soundBank._audioengine.Categories[i];
+                category.SetVolume(vanillaCategory._volume);
+            }
+        }
         
         Game1.changeMusicTrack("none");
         Game1.activeClickableMenu = SoundboardMenu;
         IsOpen = true;
         Game1.playSound("bigSelect");
+    }
+
+    public void Update()
+    {
+        if (ModEntry.ModConfig.VanillaOnly) ModEntry.VanillaSoundBank._audioengine.Update();
     }
 }
