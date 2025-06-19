@@ -2,8 +2,13 @@
     "Name": "Soundboard",
     "Author": "Spiderbuttons",
     "Version": "1.0.0",
-    "Description": "A template for a Stardew Valley mod.",
+    "Description": "Display and listen to every sound in the game from a single menu!",
     "UniqueID": "Spiderbuttons.Soundboard",
     "EntryDll": "Soundboard.dll",
-    "UpdateKeys": []
+    "UpdateKeys": [ "Nexus:34968" ],
+    "Dependencies": [
+        {   
+            "UniqueID": "focustense.StardewUI",
+        }
+    ]
 }
