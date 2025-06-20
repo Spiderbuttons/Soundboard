@@ -85,6 +85,8 @@ public partial class Sound
         if (_cue.IsPlaying || IsPlaying) _cue.Stop(AudioStopOptions.Immediate);
         _cue.Play();
         IsPlaying = true;
+        Log.Info($"Now playing: {Id}");
+        if (ModEntry.ModConfig.CopyOnPlay) DesktopClipboard.SetText(Id);
     }
 
     public void Stop()

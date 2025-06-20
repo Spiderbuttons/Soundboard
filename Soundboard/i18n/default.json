@@ -7,6 +7,8 @@
   "Loops": "Loops",
   
   "Config.Keybind": "Open Soundboard",
+  "Config.Copy": "Copy On Play",
+  "Config.Copy.Desc": "Copy the cue name to the clipboard when played.",
   "Config.Tooltips": "Force Tooltips",
   "Config.Tooltips.Desc": "Show tooltips for all cues even if they are not too long to display.",
   "Config.Vanilla": "Vanilla Only",

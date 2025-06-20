@@ -101,6 +101,13 @@ namespace Soundboard
             );
             gmcm?.AddBoolOption(
                 mod: ModManifest,
+                name: () => Helper.Translation.Get("Config.Copy"),
+                tooltip: () => Helper.Translation.Get("Config.Copy.Desc"),
+                getValue: () => ModConfig.CopyOnPlay,
+                setValue: value => ModConfig.CopyOnPlay = value
+            );
+            gmcm?.AddBoolOption(
+                mod: ModManifest,
                 name: () => Helper.Translation.Get("Config.Tooltips"),
                 tooltip: () => Helper.Translation.Get("Config.Tooltips.Desc"),
                 getValue: () => ModConfig.ForceTooltips,
